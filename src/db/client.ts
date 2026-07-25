@@ -2,20 +2,32 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "./schema";
 
+type Db = ReturnType<typeof createDb>;
+
 declare global {
-  // eslint-disable-next-line no-var
-  var __dbClient: ReturnType<typeof postgres> | undefined;
+    // eslint-disable-next-line no-var
+  var __rprpDb: Db | undefined;
 }
 
-function createClient() {
-  const url = process.env.DATABASE_URL;
-  if (!url) throw new Error("DATABASE_URL is not set");
-  // prepare:false is required for Supabase transaction pooler (pgbouncer)
-  return postgres(url, { prepare: false, max: 5 });
+function createDb() {
+    const url = process.env.DATABASE_URL;
+    if (!url) throw new Error("DATABASE_URL is not set");
+    // prepare:false is required for Supabase transaction pooler (pgbouncer)
+  const client = postgres(url, { prepare: false, max: 5 });
+    return drizzle(client, { schema });
 }
 
-const client = globalThis.__dbClient ?? createClient();
-if (process.env.NODE_ENV !== "production") globalThis.__dbClient = client;
+/**
+ * Lazy singleton behind a Proxy: the connection (and the DATABASE_URL check)
+ * only happens on first query at runtime - never at import time. This keeps
+ * next build env-independent (page-data collection imports route modules).
+ */
+export const db: Db = new Proxy({} as Db, {
+    get(_target, prop, receiver) {
+          if (!globalThis.__rprpDb) globalThis.__rprpDb = createDb();
+          const value = Reflect.get(globalThis.__rprpDb, prop, receiver);
+          return typeof value === "function" ? value.bind(globalThis.__rprpDb) : value;
+    },
+});
 
-export const db = drizzle(client, { schema });
 export { schema };
