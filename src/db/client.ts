@@ -13,7 +13,7 @@ function createDb() {
     const url = process.env.DATABASE_URL ?? process.env.DATA;
     if (!url) throw new Error("DATABASE_URL is not set");
     // prepare:false is required for Supabase transaction pooler (pgbouncer)
-  const client = postgres(url, { prepare: false, max: 5 });
+    const client = postgres(url, { prepare: false, max: 3, connect_timeout: 8, idle_timeout: 20 });
     return drizzle(client, { schema });
 }
 
