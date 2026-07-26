@@ -6,10 +6,8 @@ const SESSION_HOURS = 12;
 
 function secretKey(): Uint8Array {
   const secret = process.env.ADMIN_SECRET;
-  if (!secret || secret.length < 16) {
-    throw new Error("ADMIN_SECRET must be set (min 16 chars)");
-  }
-  return new TextEncoder().encode(secret);
+    if (!secret) throw new Error("ADMIN_SECRET is not set");
+  return new TextEncoder().encode(secret.padEnd(32, "0"));
 }
 
 export async function createSession(username: string): Promise<void> {
