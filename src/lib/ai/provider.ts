@@ -1,5 +1,6 @@
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createOpenAI } from "@ai-sdk/openai";
+import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import type { LanguageModel } from "ai";
 
 /**
@@ -10,7 +11,7 @@ import type { LanguageModel } from "ai";
  * Env fallback: accepts legacy var name "APIKey" as well.
  */
 export function getModel(): LanguageModel {
-    const provider = (process.env.AI_PROVIDER ?? "anthropic").toLowerCase();
+    const provider = (process.env.AI_PROVIDER ?? "google").toLowerCase();
     const modelId = process.env.AI_MODEL ?? defaultModel(provider);
 
   if (provider === "openai") {
@@ -19,6 +20,7 @@ export function getModel(): LanguageModel {
         });
         return openai(modelId);
   }
+    if (provider === "google") return createGoogleGenerativeAI({ apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY ?? process.env.GOOGLE_API_KEY ?? process.env.AI_API_KEY ?? process.env.APIKey })(modelId);
 
   const anthropic = createAnthropic({
         apiKey: process.env.ANTHROPIC_API_KEY ?? process.env.AI_API_KEY ?? process.env.APIKey,
@@ -27,5 +29,5 @@ export function getModel(): LanguageModel {
 }
 
 function defaultModel(provider: string): string {
-    return provider === "openai" ? "gpt-4o-mini" : "claude-sonnet-4-5";
+    if (provider === "openai") return "gpt-4o-mini"; if (provider === "anthropic") return "claude-sonnet-4-5"; return "gemini-2.0-flash";
 }
